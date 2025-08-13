@@ -35,15 +35,19 @@ export async function GET(request: NextRequest) {
     const shopDomain = shop
 
     // Store shop and access token in database
-    const { data: existingShop } = await supabaseAdmin
+    console.log('Looking for existing shop:', shopDomain)
+    const { data: existingShop, error: shopError } = await supabaseAdmin
       .from('shops')
       .select('*')
       .eq('domain', shopDomain)
       .single()
 
+    console.log('Existing shop query:', { existingShop, shopError })
+
     if (existingShop) {
       // Update existing shop
-      await supabaseAdmin
+      console.log('Updating existing shop')
+      const { error: updateError } = await supabaseAdmin
         .from('shops')
         .update({ 
           access_token: accessToken,
@@ -51,9 +55,19 @@ export async function GET(request: NextRequest) {
           updated_at: new Date().toISOString()
         })
         .eq('domain', shopDomain)
+      
+      if (updateError) {
+        console.error('Error updating shop:', updateError)
+      }
     } else {
       // Create new shop
-      await supabaseAdmin
+      console.log('Creating new shop:', {
+        name: shopDomain.replace('.myshopify.com', ''),
+        domain: shopDomain,
+        access_token: accessToken ? 'present' : 'missing'
+      })
+      
+      const { data: newShop, error: insertError } = await supabaseAdmin
         .from('shops')
         .insert({
           name: shopDomain.replace('.myshopify.com', ''),
@@ -63,6 +77,13 @@ export async function GET(request: NextRequest) {
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
+        .select()
+      
+      if (insertError) {
+        console.error('Error creating shop:', insertError)
+      } else {
+        console.log('Successfully created shop:', newShop)
+      }
     }
 
     // Redirect to app dashboard

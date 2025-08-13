@@ -20,12 +20,16 @@ export default function ShopSelector({ selected, onSelect }: ShopSelectorProps) 
   }, [])
 
   const fetchShops = async () => {
+    console.log('Fetching shops from database...')
     const { data, error } = await supabase
       .from('shops')
       .select('*')
       .order('name')
 
+    console.log('Shops query result:', { data, error })
+
     if (data) {
+      console.log(`Found ${data.length} shops:`, data)
       setShops(data)
       if (data.length > 0 && !selected) {
         onSelect(data[0])
