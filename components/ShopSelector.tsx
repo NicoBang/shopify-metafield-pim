@@ -20,24 +20,24 @@ export default function ShopSelector({ selected, onSelect }: ShopSelectorProps) 
   }, [])
 
   const fetchShops = async () => {
-    console.log('Fetching shops from database...')
-    const { data, error } = await supabase
-      .from('shops')
-      .select('*')
-      .order('name')
+    console.log('Fetching shops via API...')
+    try {
+      const response = await fetch('/api/shops')
+      const result = await response.json()
+      
+      console.log('API response:', result)
 
-    console.log('Shops query result:', { data, error })
-
-    if (data) {
-      console.log(`Found ${data.length} shops:`, data)
-      setShops(data)
-      if (data.length > 0 && !selected) {
-        onSelect(data[0])
+      if (response.ok && result.shops) {
+        console.log(`Found ${result.shops.length} shops:`, result.shops)
+        setShops(result.shops)
+        if (result.shops.length > 0 && !selected) {
+          onSelect(result.shops[0])
+        }
+      } else {
+        console.error('API error:', result.error)
       }
-    }
-    
-    if (error) {
-      console.error('Error fetching shops:', error)
+    } catch (error) {
+      console.error('Fetch error:', error)
     }
     
     setLoading(false)

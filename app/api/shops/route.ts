@@ -3,17 +3,22 @@ import { supabaseAdmin } from '@/lib/supabase'
 
 export async function GET() {
   try {
+    console.log('API: Fetching shops from database...')
     const { data: shops, error } = await supabaseAdmin
       .from('shops')
-      .select('id, domain, shop_name, is_plus, created_at, updated_at')
-      .order('shop_name')
+      .select('id, domain, name, is_plus, created_at, updated_at, access_token')
+      .order('name')
+
+    console.log('API: Shops query result:', { shopsCount: shops?.length, error })
 
     if (error) {
+      console.error('API: Database error:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
     return NextResponse.json({ shops })
   } catch (error: any) {
+    console.error('API: Error fetching shops:', error)
     return NextResponse.json(
       { error: 'Internal server error' }, 
       { status: 500 }
@@ -23,12 +28,12 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { domain, shop_name, access_token, is_plus } = await request.json()
+    const { domain, name, access_token, is_plus } = await request.json()
 
     // Validate required fields
-    if (!domain || !shop_name || !access_token) {
+    if (!domain || !name || !access_token) {
       return NextResponse.json(
-        { error: 'Missing required fields: domain, shop_name, access_token' }, 
+        { error: 'Missing required fields: domain, name, access_token' }, 
         { status: 400 }
       )
     }
@@ -45,7 +50,7 @@ export async function POST(request: NextRequest) {
       const { data: updatedShop, error } = await supabaseAdmin
         .from('shops')
         .update({
-          shop_name,
+          name,
           access_token,
           is_plus: is_plus || false,
           updated_at: new Date().toISOString()
@@ -65,9 +70,11 @@ export async function POST(request: NextRequest) {
         .from('shops')
         .insert({
           domain,
-          shop_name,
+          name,
           access_token,
-          is_plus: is_plus || false
+          is_plus: is_plus || false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         })
         .select()
         .single()
@@ -84,7 +91,7 @@ export async function POST(request: NextRequest) {
           action: 'shop_created',
           resource_type: 'shop',
           resource_id: newShop.id,
-          changes: { domain, shop_name, is_plus }
+          changes: { domain, name, is_plus }
         })
 
       return NextResponse.json({ shop: newShop }, { status: 201 })
