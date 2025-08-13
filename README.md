@@ -220,4 +220,4 @@ MIT License - se LICENSE filen for detaljer.
 
 ---
 
-**Vigtigt**: Husk at teste grundigt i development environment før deployment til production!
+**Vigtigt**: Husk at teste grundigt i development environment før deployment til production!# shopify-metafield-pim
