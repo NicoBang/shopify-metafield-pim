@@ -98,13 +98,19 @@ export default function BulkEditTable({
                   {product.title}
                 </div>
                 <div className="text-sm text-gray-500">
-                  ID: {product.product_id}
+                  ID: {product.shopify_product_id}
+                  {product.handle && <span className="ml-2">({product.handle})</span>}
                 </div>
               </td>
               {definitions.map(def => {
                 const cellKey = `${product.id}-${def.key}`
                 const isEditing = editingCell === cellKey
-                const value = editedValues[cellKey] ?? product.metafields?.[def.key] ?? ''
+                
+                // Find matching metafield from the new array structure
+                const metafield = product.metafields?.find(mf => 
+                  mf.namespace === def.namespace && mf.key === def.key
+                )
+                const value = editedValues[cellKey] ?? metafield?.value ?? ''
                 
                 return (
                   <td key={def.id} className="px-6 py-4 whitespace-nowrap">

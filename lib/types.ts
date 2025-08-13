@@ -64,9 +64,29 @@ export interface AuditLog {
 }
 
 export interface Product {
-  id: string
+  id: string // UUID from products table
+  shop_id: string
+  shopify_product_id: string // The actual Shopify product ID
   title: string
-  product_id: string
-  metafields?: Record<string, any>
-  status: 'draft' | 'scheduled' | 'published' | 'syncing'
+  handle?: string
+  status: 'active' | 'archived' | 'draft'
+  metafields?: ProductMetafield[]
+  created_at: string
+  updated_at: string
+}
+
+export interface ShopifyProduct {
+  id: string // Raw Shopify ID
+  title: string
+  handle: string
+  status: string
+  metafields: ShopifyMetafield[]
+}
+
+export interface ShopifyMetafield {
+  id: string
+  namespace: string
+  key: string
+  value: string
+  type: string
 }

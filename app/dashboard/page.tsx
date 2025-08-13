@@ -31,11 +31,23 @@ export default function Dashboard() {
         { 
           event: '*', 
           schema: 'public', 
+          table: 'products',
+          filter: `shop_id=eq.${selectedShop.id}`
+        },
+        (payload) => {
+          console.log('Products real-time update:', payload)
+          fetchProducts()
+        }
+      )
+      .on('postgres_changes', 
+        { 
+          event: '*', 
+          schema: 'public', 
           table: 'product_metafields',
           filter: `shop_id=eq.${selectedShop.id}`
         },
         (payload) => {
-          console.log('Real-time update:', payload)
+          console.log('Metafields real-time update:', payload)
           fetchProducts()
         }
       )
@@ -69,22 +81,26 @@ export default function Dashboard() {
     if (!selectedShop) return
     
     setLoading(true)
+    
+    // Use the new products_with_metafields view for easier querying
     const { data, error } = await supabase
-      .from('product_metafields')
-      .select(`
-        *,
-        metafield_definitions (*)
-      `)
+      .from('products_with_metafields')
+      .select('*')
       .eq('shop_id', selectedShop.id)
+      .order('updated_at', { ascending: false })
 
     if (data) {
       // Transform data to match Product interface
       const transformedProducts: Product[] = data.map(item => ({
         id: item.id,
-        title: item.product_title || 'Untitled Product',
-        product_id: item.product_id,
+        shop_id: item.shop_id,
+        shopify_product_id: item.shopify_product_id,
+        title: item.title,
+        handle: item.handle,
         status: item.status,
-        metafields: { [item.metafield_definitions?.key || '']: item.value }
+        metafields: item.metafields || [],
+        created_at: item.created_at,
+        updated_at: item.updated_at
       }))
       
       setProducts(transformedProducts)
@@ -92,6 +108,33 @@ export default function Dashboard() {
     
     if (error) {
       console.error('Error fetching products:', error)
+      
+      // Fallback: try fetching from products table directly
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from('products')
+        .select('*')
+        .eq('shop_id', selectedShop.id)
+        .order('updated_at', { ascending: false })
+        
+      if (fallbackData) {
+        const fallbackProducts: Product[] = fallbackData.map(item => ({
+          id: item.id,
+          shop_id: item.shop_id,
+          shopify_product_id: item.shopify_product_id,
+          title: item.title,
+          handle: item.handle,
+          status: item.status,
+          metafields: [],
+          created_at: item.created_at,
+          updated_at: item.updated_at
+        }))
+        
+        setProducts(fallbackProducts)
+      }
+      
+      if (fallbackError) {
+        console.error('Fallback error:', fallbackError)
+      }
     }
     
     setLoading(false)
@@ -115,7 +158,10 @@ export default function Dashboard() {
 
       if (response.ok) {
         const result = await response.json()
-        alert(`Successfully synced ${result.products} products from Shopify!`)
+        const message = `Successfully synced ${result.products} products from ${result.shop}!\n` +
+                       `New products: ${result.inserted}\n` +
+                       `Updated products: ${result.updated}`
+        alert(message)
         fetchProducts() // Reload the local products
       } else {
         const error = await response.json()
