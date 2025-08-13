@@ -97,6 +97,61 @@ export default function Dashboard() {
     setLoading(false)
   }
 
+  const syncShopifyProducts = async () => {
+    if (!selectedShop) return
+
+    setLoading(true)
+    try {
+      const response = await fetch('/api/shopify/products', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          shopId: selectedShop.id,
+          limit: 50
+        })
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        alert(`Successfully synced ${result.products} products from Shopify!`)
+        fetchProducts() // Reload the local products
+      } else {
+        const error = await response.json()
+        alert(`Error syncing products: ${error.error}`)
+      }
+    } catch (error) {
+      console.error('Sync error:', error)
+      alert('Error syncing products')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const createDefaultDefinitions = async () => {
+    try {
+      const response = await fetch('/api/metafields/definitions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        alert('Default metafield definitions created!')
+        fetchDefinitions() // Reload definitions
+      } else {
+        const error = await response.json()
+        alert(`Error creating definitions: ${error.error}`)
+      }
+    } catch (error) {
+      console.error('Definition creation error:', error)
+      alert('Error creating definitions')
+    }
+  }
+
   const fetchDefinitions = async () => {
     const { data, error } = await supabase
       .from('metafield_definitions')
@@ -196,6 +251,13 @@ export default function Dashboard() {
                   </div>
                   <div className="flex space-x-2">
                     <button
+                      onClick={syncShopifyProducts}
+                      disabled={loading}
+                      className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {loading ? 'Syncing...' : 'Sync Products'}
+                    </button>
+                    <button
                       onClick={() => setIsSchedulerOpen(true)}
                       disabled={selectedProducts.length === 0}
                       className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -226,11 +288,19 @@ export default function Dashboard() {
         ) : (
           <div className="text-center py-16">
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              Select a Shop to Get Started
+              Welcome to Metafield PIM
             </h3>
-            <p className="text-gray-500">
-              Choose a Shopify store from the dropdown above to manage its metafields.
+            <p className="text-gray-500 mb-6">
+              Your Shopify store is connected! Get started by setting up metafield definitions and syncing your products.
             </p>
+            <div className="flex justify-center space-x-4">
+              <button
+                onClick={createDefaultDefinitions}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Create Default Metafields
+              </button>
+            </div>
           </div>
         )}
       </main>

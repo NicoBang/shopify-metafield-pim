@@ -23,7 +23,7 @@ export default function ShopSelector({ selected, onSelect }: ShopSelectorProps) 
     const { data, error } = await supabase
       .from('shops')
       .select('*')
-      .order('shop_name')
+      .order('name')
 
     if (data) {
       setShops(data)
@@ -31,6 +31,11 @@ export default function ShopSelector({ selected, onSelect }: ShopSelectorProps) 
         onSelect(data[0])
       }
     }
+    
+    if (error) {
+      console.error('Error fetching shops:', error)
+    }
+    
     setLoading(false)
   }
 
@@ -47,7 +52,7 @@ export default function ShopSelector({ selected, onSelect }: ShopSelectorProps) 
         className="flex items-center justify-between w-48 px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
       >
         <span className="truncate">
-          {selected ? selected.shop_name : 'Select Shop'}
+          {selected ? selected.name : 'Select Shop'}
         </span>
         <ChevronDown className={`ml-2 h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
@@ -67,7 +72,7 @@ export default function ShopSelector({ selected, onSelect }: ShopSelectorProps) 
                 }`}
               >
                 <div>
-                  <div className="font-medium">{shop.shop_name}</div>
+                  <div className="font-medium">{shop.name}</div>
                   <div className="text-sm text-gray-500">{shop.domain}</div>
                 </div>
                 {shop.is_plus && (

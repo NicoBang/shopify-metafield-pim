@@ -22,6 +22,71 @@ export class ShopifyGraphQLClient {
     this.isPlus = isPlus
   }
 
+  async getProducts(limit = 50) {
+    const query = `
+      query getProducts($first: Int!) {
+        products(first: $first) {
+          edges {
+            node {
+              id
+              title
+              handle
+              status
+              createdAt
+              updatedAt
+              metafields(first: 20) {
+                edges {
+                  node {
+                    id
+                    namespace
+                    key
+                    value
+                    type
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    `
+
+    const variables = { first: limit }
+
+    // Rate limiting logic
+    await this.respectRateLimit()
+
+    const response = await fetch(`https://${this.shop}/admin/api/2024-10/graphql.json`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Shopify-Access-Token': this.accessToken,
+      },
+      body: JSON.stringify({ query, variables })
+    })
+
+    const result = await response.json()
+    
+    if (result.errors) {
+      throw new Error(`GraphQL Error: ${JSON.stringify(result.errors)}`)
+    }
+
+    // Transform to simple format
+    return result.data.products.edges.map((edge: any) => ({
+      id: edge.node.id.replace('gid://shopify/Product/', ''),
+      title: edge.node.title,
+      handle: edge.node.handle,
+      status: edge.node.status,
+      metafields: edge.node.metafields.edges.map((mf: any) => ({
+        id: mf.node.id,
+        namespace: mf.node.namespace,
+        key: mf.node.key,
+        value: mf.node.value,
+        type: mf.node.type
+      }))
+    }))
+  }
+
   async updateMetafields(productId: string, metafields: any[]) {
     const mutation = `
       mutation productUpdate($input: ProductInput!) {

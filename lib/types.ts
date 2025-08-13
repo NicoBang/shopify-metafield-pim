@@ -1,7 +1,7 @@
 export interface Shop {
   id: string
   domain: string
-  shop_name: string
+  name: string
   access_token: string
   is_plus: boolean
   created_at: string
