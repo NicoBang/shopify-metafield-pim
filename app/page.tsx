@@ -35,8 +35,14 @@ export default function Home() {
           
           <div className="space-x-4">
             <Link 
-              href="/dashboard" 
+              href="/install" 
               className="bg-blue-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+            >
+              Install App
+            </Link>
+            <Link 
+              href="/dashboard" 
+              className="bg-gray-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-gray-700 transition-colors"
             >
               Open Dashboard
             </Link>

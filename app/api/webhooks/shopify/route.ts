@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import crypto from 'crypto'
 
+export async function GET(request: NextRequest) {
+  return NextResponse.json({ 
+    message: 'Webhook endpoint is ready',
+    endpoint: '/api/webhooks/shopify',
+    methods: ['POST'],
+    status: 'active'
+  })
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.text()

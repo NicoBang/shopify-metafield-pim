@@ -4,10 +4,11 @@ import '@shopify/shopify-api/adapters/node'
 export const shopify = shopifyApi({
   apiKey: process.env.SHOPIFY_API_KEY || 'placeholder',
   apiSecretKey: process.env.SHOPIFY_API_SECRET || 'placeholder',
-  scopes: ['read_products', 'write_products'],
-  hostName: process.env.SHOPIFY_APP_URL || 'https://localhost:3000',
+  scopes: ['read_products', 'write_products', 'read_product_listings', 'write_product_listings'],
+  hostName: process.env.SHOPIFY_APP_URL?.replace(/\/$/, '') || 'https://localhost:3000',
   apiVersion: ApiVersion.October22,
   isEmbeddedApp: true,
+  isCustomStoreApp: false,
 })
 
 export class ShopifyGraphQLClient {
