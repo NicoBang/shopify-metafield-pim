@@ -10,8 +10,8 @@ const DEFAULT_DEFINITIONS = [
     description: 'Extended product description'
   },
   {
-    namespace: 'custom',
-    key: 'care_instructions',
+    namespace: 'test_data',
+    key: 'binding_mount',
     type: 'multi_line_text_field',
     description: 'Product care instructions'
   },
