@@ -190,11 +190,11 @@ export default function BulkEditTable({
               })}
               <td className="px-6 py-4">
                 <span className={`px-2 py-1 text-xs rounded-full ${
-                  product.status === 'published' 
+                  product.status === 'active' 
                     ? 'bg-green-100 text-green-800'
-                    : product.status === 'scheduled'
-                    ? 'bg-blue-100 text-blue-800'
-                    : product.status === 'syncing'
+                    : product.status === 'archived'
+                    ? 'bg-gray-100 text-gray-800'
+                    : product.status === 'draft'
                     ? 'bg-yellow-100 text-yellow-800'
                     : 'bg-gray-100 text-gray-800'
                 }`}>
