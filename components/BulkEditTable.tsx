@@ -108,7 +108,8 @@ export default function BulkEditTable({
                 
                 // Find matching metafield from the new array structure
                 const metafield = product.metafields?.find(mf => 
-                  mf.namespace === def.namespace && mf.key === def.key
+                  mf.metafield_definitions?.namespace === def.namespace && 
+                  mf.metafield_definitions?.key === def.key
                 )
                 const value = editedValues[cellKey] ?? metafield?.value ?? ''
                 
