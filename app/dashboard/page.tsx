@@ -212,20 +212,31 @@ export default function Dashboard() {
   const handleBulkUpdate = async (updates: any[]) => {
     if (!selectedShop) return
 
-    const { error } = await supabase
-      .from('sync_queue')
-      .insert({
-        shop_id: selectedShop.id,
-        job_type: 'bulk_update',
-        payload: { updates },
-        scheduled_for: new Date().toISOString(),
-        status: 'pending'
+    try {
+      const response = await fetch('/api/metafields/queue', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          shop_id: selectedShop.id,
+          job_type: 'bulk_update',
+          payload: { updates },
+          scheduled_for: new Date().toISOString()
+        })
       })
 
-    if (!error) {
-      alert('Bulk update queued successfully!')
-      setSelectedProducts([])
-    } else {
+      const result = await response.json()
+
+      if (response.ok) {
+        alert('Bulk update queued successfully!')
+        setSelectedProducts([])
+      } else {
+        console.error('Sync queue error:', result)
+        alert(`Error queuing bulk update: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Network error:', error)
       alert('Error queuing bulk update')
     }
   }
@@ -233,21 +244,32 @@ export default function Dashboard() {
   const handleSchedule = async (scheduledFor: Date, productIds: string[]) => {
     if (!selectedShop) return
 
-    const { error } = await supabase
-      .from('sync_queue')
-      .insert({
-        shop_id: selectedShop.id,
-        job_type: 'bulk_update',
-        payload: { productIds },
-        scheduled_for: scheduledFor.toISOString(),
-        status: 'pending'
+    try {
+      const response = await fetch('/api/metafields/queue', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          shop_id: selectedShop.id,
+          job_type: 'bulk_update',
+          payload: { productIds },
+          scheduled_for: scheduledFor.toISOString()
+        })
       })
 
-    if (!error) {
-      alert(`Update scheduled for ${scheduledFor.toLocaleString()}`)
-      setIsSchedulerOpen(false)
-      setSelectedProducts([])
-    } else {
+      const result = await response.json()
+
+      if (response.ok) {
+        alert(`Update scheduled for ${scheduledFor.toLocaleString()}`)
+        setIsSchedulerOpen(false)
+        setSelectedProducts([])
+      } else {
+        console.error('Sync queue error:', result)
+        alert(`Error scheduling update: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Network error:', error)
       alert('Error scheduling update')
     }
   }
