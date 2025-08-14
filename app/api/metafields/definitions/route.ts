@@ -12,8 +12,8 @@ const DEFAULT_DEFINITIONS = [
   {
     namespace: 'test_data',
     key: 'binding_mount',
-    type: 'multi_line_text_field',
-    description: 'Product care instructions'
+    type: 'single_line_text_field',
+    description: 'Binding mount'
   },
   {
     namespace: 'custom',
