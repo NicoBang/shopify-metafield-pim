@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import crypto from 'crypto'
 
+export const runtime = 'nodejs'
+
 export async function GET(request: NextRequest) {
   return NextResponse.json({ 
     message: 'Webhook endpoint is ready',

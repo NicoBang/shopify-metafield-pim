@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
       products: shopifyProducts.length,
       inserted: insertedProducts,
       updated: updatedProducts,
-      shop: shop.shop_name 
+      shop: shop.name 
     })
 
   } catch (error: any) {

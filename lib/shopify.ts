@@ -5,7 +5,9 @@ export const shopify = shopifyApi({
   apiKey: process.env.SHOPIFY_API_KEY || 'placeholder',
   apiSecretKey: process.env.SHOPIFY_API_SECRET || 'placeholder',
   scopes: ['read_products', 'write_products', 'read_product_listings', 'write_product_listings'],
-  hostName: process.env.SHOPIFY_APP_URL?.replace(/\/$/, '') || 'https://localhost:3000',
+  hostName: (process.env.SHOPIFY_APP_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
+    .replace(/^https?:\/\//, '')
+    .replace(/\/$/, ''),
   apiVersion: ApiVersion.October22,
   isEmbeddedApp: true,
   isCustomStoreApp: false,
