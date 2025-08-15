@@ -145,7 +145,8 @@ export default function Dashboard() {
 
     setLoading(true)
     try {
-      const response = await fetch('/api/shopify/products', {
+      // Sync products
+      const productResponse = await fetch('/api/shopify/products', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -156,17 +157,31 @@ export default function Dashboard() {
         })
       })
 
-      if (response.ok) {
-        const result = await response.json()
-        const message = `Successfully synced ${result.products} products from ${result.shop}!\n` +
-                       `New products: ${result.inserted}\n` +
-                       `Updated products: ${result.updated}`
-        alert(message)
-        fetchProducts() // Reload the local products
-      } else {
-        const error = await response.json()
+      if (!productResponse.ok) {
+        const error = await productResponse.json()
         alert(`Error syncing products: ${error.error}`)
+        return
       }
+
+      const productResult = await productResponse.json()
+
+      // Sync metafield definitions
+      const definitionsResponse = await fetch(`/api/metafields/definitions?shopId=${selectedShop.id}`)
+      
+      let definitionsCount = 0
+      if (definitionsResponse.ok) {
+        const definitionsResult = await definitionsResponse.json()
+        definitionsCount = definitionsResult.definitions?.length || 0
+        // Reload definitions
+        fetchDefinitions()
+      }
+
+      const message = `Successfully synced from ${productResult.shop}!\n` +
+                     `Products: ${productResult.products} (${productResult.inserted} new, ${productResult.updated} updated)\n` +
+                     `Metafield definitions: ${definitionsCount}`
+      alert(message)
+      fetchProducts() // Reload the local products
+      
     } catch (error) {
       console.error('Sync error:', error)
       alert('Error syncing products')
