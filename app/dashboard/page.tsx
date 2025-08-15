@@ -292,10 +292,11 @@ export default function Dashboard() {
       const result = await response.json()
 
       if (response.ok) {
-        alert('Metafields updated successfully!')
-        await fetchProducts() // Reload products
+        console.log('Sync successful, clearing changes')
+        bulkEditTableRef.current?.clearChanges() // Clear changes first
+        await fetchProducts() // Then reload products
         setSelectedProducts([])
-        bulkEditTableRef.current?.clearChanges() // Only clear after successful sync
+        alert('Metafields updated successfully!')
       } else {
         console.error('Immediate sync error:', result)
         alert(`Error updating metafields: ${result.error}`)

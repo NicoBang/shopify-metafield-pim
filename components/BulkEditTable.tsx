@@ -71,6 +71,8 @@ const BulkEditTable = forwardRef<BulkEditTableRef, BulkEditTableProps>(({
       }
     })
     
+    console.log('BulkEditTable saveChanges called with updates:', updates)
+    
     try {
       await onUpdate(updates)
       // Changes will be cleared by parent after successful sync

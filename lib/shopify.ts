@@ -159,6 +159,8 @@ export class ShopifyGraphQLClient {
   }
 
   async updateMetafields(productId: string, metafields: any[]) {
+    console.log(`ShopifyGraphQLClient.updateMetafields called for product ${productId} with:`, metafields)
+    
     const mutation = `
       mutation productUpdate($input: ProductInput!) {
         productUpdate(input: $input) {
@@ -184,17 +186,24 @@ export class ShopifyGraphQLClient {
       }
     `
 
+    // Ensure productId is in the correct format
+    const formattedProductId = productId.includes('gid://shopify/Product/') 
+      ? productId 
+      : `gid://shopify/Product/${productId}`
+
     const variables = {
       input: {
-        id: `gid://shopify/Product/${productId}`,
+        id: formattedProductId,
         metafields: metafields.map(mf => ({
           namespace: mf.namespace,
           key: mf.key,
-          value: JSON.stringify(mf.value),
+          value: String(mf.value), // Don't JSON.stringify simple values
           type: mf.type
         }))
       }
     }
+
+    console.log('GraphQL variables:', JSON.stringify(variables, null, 2))
 
     // Rate limiting logic
     await this.respectRateLimit()
@@ -208,7 +217,20 @@ export class ShopifyGraphQLClient {
       body: JSON.stringify({ query: mutation, variables })
     })
 
-    return response.json()
+    const result = await response.json()
+    console.log('Shopify updateMetafields response:', JSON.stringify(result, null, 2))
+
+    if (result.errors) {
+      console.error('GraphQL errors in updateMetafields:', result.errors)
+      throw new Error(`GraphQL Error: ${JSON.stringify(result.errors)}`)
+    }
+
+    if (result.data?.productUpdate?.userErrors?.length > 0) {
+      console.error('User errors in updateMetafields:', result.data.productUpdate.userErrors)
+      throw new Error(`User Error: ${JSON.stringify(result.data.productUpdate.userErrors)}`)
+    }
+
+    return result
   }
 
   private async respectRateLimit() {

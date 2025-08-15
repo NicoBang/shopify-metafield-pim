@@ -52,12 +52,23 @@ export async function POST(request: NextRequest) {
           // Convert update format to metafield format
           const metafields = [{
             namespace: update.namespace || 'custom',
-            key: update.fieldKey,
+            key: update.fieldKey || update.key, // Support both fieldKey and key
             value: String(update.value),
             type: update.type || 'single_line_text_field'
           }]
 
-          const updateResult = await client.updateMetafields(update.productId, metafields)
+          // Need to get Shopify product ID from our local product ID
+          const { data: product, error: productError } = await supabaseAdmin
+            .from('products')
+            .select('shopify_product_id')
+            .eq('id', update.productId)
+            .single()
+
+          if (productError || !product) {
+            throw new Error(`Product not found: ${update.productId}`)
+          }
+
+          const updateResult = await client.updateMetafields(product.shopify_product_id, metafields)
           results.push({ productId: update.productId, status: 'success', result: updateResult })
           
         } catch (error: any) {
