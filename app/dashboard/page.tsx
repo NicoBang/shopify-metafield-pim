@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
-import BulkEditTable from '@/components/BulkEditTable'
+import BulkEditTable, { BulkEditTableRef } from '@/components/BulkEditTable'
 import SchedulerModal from '@/components/SchedulerModal'
 import FilterPanel from '@/components/FilterPanel'
 import ShopSelector from '@/components/ShopSelector'
@@ -20,6 +20,7 @@ export default function Dashboard() {
     hasEmptyFields: false,
     status: 'all'
   })
+  const bulkEditTableRef = useRef<BulkEditTableRef>(null)
 
   // Real-time subscriptions
   useEffect(() => {
@@ -256,6 +257,53 @@ export default function Dashboard() {
     }
   }
 
+  const handleImmediateUpdate = async (updates: any[]) => {
+    if (!selectedShop || updates.length === 0) {
+      alert('Please make some changes first')
+      return
+    }
+
+    try {
+      console.log('Processing immediate update with data:', updates)
+      
+      // Create a job payload similar to queue format
+      const jobPayload = {
+        shop_id: selectedShop.id,
+        job_type: 'bulk_update',
+        payload: { updates },
+        shops: {
+          domain: selectedShop.domain,
+          access_token: selectedShop.access_token,
+          is_plus: selectedShop.is_plus
+        }
+      }
+
+      // Call sync API directly
+      const response = await fetch('/api/metafields/sync-immediate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(jobPayload)
+      })
+
+      const result = await response.json()
+
+      if (response.ok) {
+        alert('Metafields updated successfully!')
+        fetchProducts() // Reload products
+        setSelectedProducts([])
+        bulkEditTableRef.current?.clearChanges() // Clear the changes
+      } else {
+        console.error('Immediate sync error:', result)
+        alert(`Error updating metafields: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Network error:', error)
+      alert('Error updating metafields')
+    }
+  }
+
   const handleSchedule = async (scheduledFor: Date, productIds: string[]) => {
     if (!selectedShop) return
 
@@ -348,9 +396,15 @@ export default function Dashboard() {
                       Schedule Update
                     </button>
                     <button
-                      onClick={() => handleBulkUpdate(selectedProducts.map(id => ({ productId: id })))}
-                      disabled={selectedProducts.length === 0}
-                      className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={() => {
+                        const changes = bulkEditTableRef.current?.getAllChanges() || []
+                        if (changes.length > 0) {
+                          handleImmediateUpdate(changes)
+                        } else {
+                          alert('Please make some changes first')
+                        }
+                      }}
+                      className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
                     >
                       Update Now
                     </button>
@@ -359,6 +413,7 @@ export default function Dashboard() {
 
                 {/* Table */}
                 <BulkEditTable
+                  ref={bulkEditTableRef}
                   products={products}
                   definitions={definitions}
                   selectedProducts={selectedProducts}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, forwardRef, useImperativeHandle } from 'react'
 import { Check, X, Edit2 } from 'lucide-react'
 import { Product, MetafieldDefinition } from '@/lib/types'
 
@@ -12,15 +12,40 @@ interface BulkEditTableProps {
   onUpdate: (updates: any[]) => void
 }
 
-export default function BulkEditTable({ 
+export interface BulkEditTableRef {
+  getAllChanges: () => any[]
+  clearChanges: () => void
+}
+
+const BulkEditTable = forwardRef<BulkEditTableRef, BulkEditTableProps>(({ 
   products, 
   definitions, 
   selectedProducts, 
   onSelectionChange,
   onUpdate 
-}: BulkEditTableProps) {
+}, ref) => {
   const [editingCell, setEditingCell] = useState<string | null>(null)
   const [editedValues, setEditedValues] = useState<Record<string, any>>({})
+
+  // Expose methods to parent component
+  useImperativeHandle(ref, () => ({
+    getAllChanges: () => {
+      return Object.entries(editedValues).map(([key, value]) => {
+        const [productId, fieldKey] = key.split('-')
+        const definition = definitions.find(def => def.key === fieldKey)
+        return { 
+          productId, 
+          fieldKey, 
+          value,
+          namespace: definition?.namespace || 'custom',
+          type: definition?.type || 'single_line_text_field'
+        }
+      })
+    },
+    clearChanges: () => {
+      setEditedValues({})
+    }
+  }))
 
   const handleCellEdit = (productId: string, fieldKey: string, value: any) => {
     setEditedValues(prev => ({
@@ -227,4 +252,8 @@ export default function BulkEditTable({
       )}
     </div>
   )
-}
+})
+
+BulkEditTable.displayName = 'BulkEditTable'
+
+export default BulkEditTable
