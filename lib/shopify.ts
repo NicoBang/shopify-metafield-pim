@@ -89,6 +89,55 @@ export class ShopifyGraphQLClient {
     }))
   }
 
+  async getMetafieldDefinitions(ownerType = 'PRODUCT', limit = 100) {
+    const query = `
+      query GetMetafieldDefinitions($ownerType: MetafieldOwnerType!, $first: Int) {
+        metafieldDefinitions(ownerType: $ownerType, first: $first) {
+          nodes {
+            id
+            name
+            namespace
+            key
+            description
+            type {
+              name
+            }
+            ownerType
+          }
+        }
+      }
+    `
+
+    const variables = { ownerType, first: limit }
+
+    // Rate limiting logic
+    await this.respectRateLimit()
+
+    const response = await fetch(`https://${this.shop}/admin/api/2024-10/graphql.json`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Shopify-Access-Token': this.accessToken,
+      },
+      body: JSON.stringify({ query, variables })
+    })
+
+    const result = await response.json()
+    
+    if (result.errors) {
+      throw new Error(`GraphQL Error: ${JSON.stringify(result.errors)}`)
+    }
+
+    // Transform to simple format
+    return result.data.metafieldDefinitions.nodes.map((def: any) => ({
+      namespace: def.namespace,
+      key: def.key,
+      type: def.type.name,
+      description: def.description || def.name,
+      name: def.name
+    }))
+  }
+
   async updateMetafields(productId: string, metafields: any[]) {
     const mutation = `
       mutation productUpdate($input: ProductInput!) {

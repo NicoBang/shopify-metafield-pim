@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { ShopifyGraphQLClient } from '@/lib/shopify'
 
-// Common metafield definitions
+// Common metafield definitions (kept for fallback)
 const DEFAULT_DEFINITIONS = [
   {
     namespace: 'custom',
@@ -72,6 +73,65 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url)
+    const shopId = searchParams.get('shopId')
+
+    // If shopId is provided, fetch from Shopify
+    if (shopId) {
+      // Get shop details from database
+      const { data: shop, error: shopError } = await supabaseAdmin
+        .from('shops')
+        .select('shop_domain, access_token, is_plus')
+        .eq('id', shopId)
+        .single()
+
+      if (shopError || !shop) {
+        throw new Error('Shop not found')
+      }
+
+      // Create Shopify client and fetch definitions
+      const shopifyClient = new ShopifyGraphQLClient(
+        shop.shop_domain,
+        shop.access_token,
+        shop.is_plus
+      )
+
+      const shopifyDefinitions = await shopifyClient.getMetafieldDefinitions()
+
+      // Store/update definitions in database
+      for (const definition of shopifyDefinitions) {
+        const { data: existing } = await supabaseAdmin
+          .from('metafield_definitions')
+          .select('id')
+          .eq('namespace', definition.namespace)
+          .eq('key', definition.key)
+          .single()
+
+        if (!existing) {
+          await supabaseAdmin
+            .from('metafield_definitions')
+            .insert(definition)
+        } else {
+          // Update existing definition
+          await supabaseAdmin
+            .from('metafield_definitions')
+            .update({
+              type: definition.type,
+              description: definition.description,
+              name: definition.name
+            })
+            .eq('namespace', definition.namespace)
+            .eq('key', definition.key)
+        }
+      }
+
+      return NextResponse.json({ 
+        definitions: shopifyDefinitions,
+        source: 'shopify'
+      })
+    }
+
+    // Default behavior: fetch from database
     const { data, error } = await supabaseAdmin
       .from('metafield_definitions')
       .select('*')
@@ -81,7 +141,10 @@ export async function GET(request: NextRequest) {
       throw error
     }
 
-    return NextResponse.json({ definitions: data })
+    return NextResponse.json({ 
+      definitions: data,
+      source: 'database'
+    })
 
   } catch (error: any) {
     console.error('Error fetching definitions:', error)
