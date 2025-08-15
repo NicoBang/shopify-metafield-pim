@@ -121,21 +121,26 @@ export async function GET(request: NextRequest) {
             .single()
 
           if (!existing) {
+            // Only insert fields that exist in the database schema
             const { error: insertError } = await supabaseAdmin
               .from('metafield_definitions')
-              .insert(definition)
+              .insert({
+                namespace: definition.namespace,
+                key: definition.key,
+                type: definition.type,
+                description: definition.description
+              })
             
             if (insertError) {
               console.error('Insert error for definition:', definition, insertError)
             }
           } else {
-            // Update existing definition
+            // Update existing definition (only fields that exist in schema)
             const { error: updateError } = await supabaseAdmin
               .from('metafield_definitions')
               .update({
                 type: definition.type,
-                description: definition.description,
-                name: definition.name
+                description: definition.description
               })
               .eq('namespace', definition.namespace)
               .eq('key', definition.key)
