@@ -15,6 +15,7 @@ export default function Dashboard() {
   const [selectedProducts, setSelectedProducts] = useState<string[]>([])
   const [isSchedulerOpen, setIsSchedulerOpen] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [syncing, setSyncing] = useState(false)
   const [filters, setFilters] = useState({
     search: '',
     hasEmptyFields: false,
@@ -263,6 +264,7 @@ export default function Dashboard() {
       return
     }
 
+    setSyncing(true)
     try {
       console.log('Processing immediate update with data:', updates)
       
@@ -291,9 +293,9 @@ export default function Dashboard() {
 
       if (response.ok) {
         alert('Metafields updated successfully!')
-        fetchProducts() // Reload products
+        await fetchProducts() // Reload products
         setSelectedProducts([])
-        bulkEditTableRef.current?.clearChanges() // Clear the changes
+        bulkEditTableRef.current?.clearChanges() // Only clear after successful sync
       } else {
         console.error('Immediate sync error:', result)
         alert(`Error updating metafields: ${result.error}`)
@@ -301,6 +303,8 @@ export default function Dashboard() {
     } catch (error) {
       console.error('Network error:', error)
       alert('Error updating metafields')
+    } finally {
+      setSyncing(false)
     }
   }
 
@@ -404,9 +408,10 @@ export default function Dashboard() {
                           alert('Please make some changes first')
                         }
                       }}
-                      className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                      disabled={syncing}
+                      className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Update Now
+                      {syncing ? 'Updating...' : 'Update Now'}
                     </button>
                   </div>
                 </div>
@@ -418,7 +423,8 @@ export default function Dashboard() {
                   definitions={definitions}
                   selectedProducts={selectedProducts}
                   onSelectionChange={setSelectedProducts}
-                  onUpdate={handleBulkUpdate}
+                  onUpdate={handleImmediateUpdate}
+                  syncing={syncing}
                 />
               </div>
             </div>

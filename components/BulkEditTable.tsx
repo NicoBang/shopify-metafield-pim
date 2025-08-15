@@ -10,6 +10,7 @@ interface BulkEditTableProps {
   selectedProducts: string[]
   onSelectionChange: (selected: string[]) => void
   onUpdate: (updates: any[]) => void
+  syncing?: boolean
 }
 
 export interface BulkEditTableRef {
@@ -22,7 +23,8 @@ const BulkEditTable = forwardRef<BulkEditTableRef, BulkEditTableProps>(({
   definitions, 
   selectedProducts, 
   onSelectionChange,
-  onUpdate 
+  onUpdate,
+  syncing = false
 }, ref) => {
   const [editingCell, setEditingCell] = useState<string | null>(null)
   const [editedValues, setEditedValues] = useState<Record<string, any>>({})
@@ -55,13 +57,27 @@ const BulkEditTable = forwardRef<BulkEditTableRef, BulkEditTableProps>(({
   }
 
   const saveChanges = async () => {
+    if (syncing) return // Prevent multiple saves during sync
+    
     const updates = Object.entries(editedValues).map(([key, value]) => {
       const [productId, fieldKey] = key.split('-')
-      return { productId, fieldKey, value }
+      const definition = definitions.find(def => def.key === fieldKey)
+      return { 
+        productId, 
+        fieldKey, 
+        value,
+        namespace: definition?.namespace || 'custom',
+        type: definition?.type || 'single_line_text_field'
+      }
     })
     
-    await onUpdate(updates)
-    setEditedValues({})
+    try {
+      await onUpdate(updates)
+      // Changes will be cleared by parent after successful sync
+    } catch (error) {
+      console.error('Save changes failed:', error)
+      // Don't clear changes if there was an error
+    }
   }
 
   const handleSelectAll = (checked: boolean) => {
@@ -241,12 +257,14 @@ const BulkEditTable = forwardRef<BulkEditTableRef, BulkEditTableProps>(({
         <div className="px-6 py-4 bg-yellow-50 border-t flex justify-between items-center">
           <span className="text-sm text-yellow-800">
             {Object.keys(editedValues).length} unsaved changes
+            {syncing && <span className="ml-2 text-blue-600">(syncing...)</span>}
           </span>
           <button
             onClick={saveChanges}
-            className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700"
+            disabled={syncing}
+            className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Save Changes
+            {syncing ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       )}
