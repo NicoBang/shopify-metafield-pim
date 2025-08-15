@@ -78,6 +78,8 @@ export async function GET(request: NextRequest) {
 
     // If shopId is provided, fetch from Shopify
     if (shopId) {
+      console.log('Looking up shop with ID:', shopId)
+      
       // Get shop details from database
       const { data: shop, error: shopError } = await supabaseAdmin
         .from('shops')
@@ -85,9 +87,17 @@ export async function GET(request: NextRequest) {
         .eq('id', shopId)
         .single()
 
-      if (shopError || !shop) {
+      if (shopError) {
+        console.error('Shop lookup error:', shopError)
+        throw new Error(`Shop lookup failed: ${shopError.message}`)
+      }
+      
+      if (!shop) {
+        console.error('Shop not found with ID:', shopId)
         throw new Error('Shop not found')
       }
+      
+      console.log('Found shop:', shop.shop_domain)
 
       // Create Shopify client and fetch definitions
       const shopifyClient = new ShopifyGraphQLClient(
@@ -96,38 +106,54 @@ export async function GET(request: NextRequest) {
         shop.is_plus
       )
 
+      console.log('Fetching metafield definitions from Shopify...')
       const shopifyDefinitions = await shopifyClient.getMetafieldDefinitions()
+      console.log(`Found ${shopifyDefinitions.length} metafield definitions`)
 
       // Store/update definitions in database
       for (const definition of shopifyDefinitions) {
-        const { data: existing } = await supabaseAdmin
-          .from('metafield_definitions')
-          .select('id')
-          .eq('namespace', definition.namespace)
-          .eq('key', definition.key)
-          .single()
-
-        if (!existing) {
-          await supabaseAdmin
+        try {
+          const { data: existing } = await supabaseAdmin
             .from('metafield_definitions')
-            .insert(definition)
-        } else {
-          // Update existing definition
-          await supabaseAdmin
-            .from('metafield_definitions')
-            .update({
-              type: definition.type,
-              description: definition.description,
-              name: definition.name
-            })
+            .select('id')
             .eq('namespace', definition.namespace)
             .eq('key', definition.key)
+            .single()
+
+          if (!existing) {
+            const { error: insertError } = await supabaseAdmin
+              .from('metafield_definitions')
+              .insert(definition)
+            
+            if (insertError) {
+              console.error('Insert error for definition:', definition, insertError)
+            }
+          } else {
+            // Update existing definition
+            const { error: updateError } = await supabaseAdmin
+              .from('metafield_definitions')
+              .update({
+                type: definition.type,
+                description: definition.description,
+                name: definition.name
+              })
+              .eq('namespace', definition.namespace)
+              .eq('key', definition.key)
+              
+            if (updateError) {
+              console.error('Update error for definition:', definition, updateError)
+            }
+          }
+        } catch (dbError) {
+          console.error('Database error processing definition:', definition, dbError)
+          // Continue with other definitions
         }
       }
 
       return NextResponse.json({ 
         definitions: shopifyDefinitions,
-        source: 'shopify'
+        source: 'shopify',
+        count: shopifyDefinitions.length
       })
     }
 

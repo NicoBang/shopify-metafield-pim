@@ -4,7 +4,7 @@ import '@shopify/shopify-api/adapters/node'
 export const shopify = shopifyApi({
   apiKey: process.env.SHOPIFY_API_KEY || 'placeholder',
   apiSecretKey: process.env.SHOPIFY_API_SECRET || 'placeholder',
-  scopes: ['read_products', 'write_products', 'read_product_listings', 'write_product_listings'],
+  scopes: ['read_products', 'write_products', 'read_product_listings', 'write_product_listings', 'write_metafields', 'read_metafields'],
   hostName: (process.env.SHOPIFY_APP_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
     .replace(/^https?:\/\//, '')
     .replace(/\/$/, ''),
@@ -110,6 +110,8 @@ export class ShopifyGraphQLClient {
 
     const variables = { ownerType, first: limit }
 
+    console.log(`Fetching metafield definitions for ${this.shop} with variables:`, variables)
+
     // Rate limiting logic
     await this.respectRateLimit()
 
@@ -122,20 +124,38 @@ export class ShopifyGraphQLClient {
       body: JSON.stringify({ query, variables })
     })
 
+    console.log('Shopify API response status:', response.status)
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Shopify API error response:', errorText)
+      throw new Error(`Shopify API request failed: ${response.status} ${response.statusText}`)
+    }
+
     const result = await response.json()
+    console.log('Shopify API result:', JSON.stringify(result, null, 2))
     
     if (result.errors) {
+      console.error('GraphQL errors:', result.errors)
       throw new Error(`GraphQL Error: ${JSON.stringify(result.errors)}`)
     }
 
+    if (!result.data?.metafieldDefinitions?.nodes) {
+      console.error('Unexpected response structure:', result)
+      throw new Error('Unexpected response structure from Shopify API')
+    }
+
     // Transform to simple format
-    return result.data.metafieldDefinitions.nodes.map((def: any) => ({
+    const definitions = result.data.metafieldDefinitions.nodes.map((def: any) => ({
       namespace: def.namespace,
       key: def.key,
       type: def.type.name,
       description: def.description || def.name,
       name: def.name
     }))
+
+    console.log(`Transformed ${definitions.length} definitions`)
+    return definitions
   }
 
   async updateMetafields(productId: string, metafields: any[]) {
