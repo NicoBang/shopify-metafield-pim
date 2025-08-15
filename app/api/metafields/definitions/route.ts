@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
       // Get shop details from database
       const { data: shop, error: shopError } = await supabaseAdmin
         .from('shops')
-        .select('shop_domain, access_token, is_plus')
+        .select('domain, access_token, is_plus')
         .eq('id', shopId)
         .single()
 
@@ -97,11 +97,11 @@ export async function GET(request: NextRequest) {
         throw new Error('Shop not found')
       }
       
-      console.log('Found shop:', shop.shop_domain)
+      console.log('Found shop:', shop.domain)
 
       // Create Shopify client and fetch definitions
       const shopifyClient = new ShopifyGraphQLClient(
-        shop.shop_domain,
+        shop.domain,
         shop.access_token,
         shop.is_plus
       )
